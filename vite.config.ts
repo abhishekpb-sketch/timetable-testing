@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => {
             short_name: 'Timetable',
             description: 'Class Timetable App',
             theme_color: '#2563eb',
-            background_color: '#2563eb',
+            background_color: '#ffffff',
             display: 'standalone',
             start_url: '/',
             icons: [
