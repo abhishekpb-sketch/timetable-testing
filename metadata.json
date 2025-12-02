@@ -1,0 +1,5 @@
+{
+  "name": "Timetable",
+  "description": "Real-time synchronized class schedule viewer powered by Google Sheets.",
+  "requestFramePermissions": []
+}
