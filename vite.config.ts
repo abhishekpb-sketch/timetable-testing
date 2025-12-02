@@ -20,22 +20,41 @@ export default defineConfig(({ mode }) => {
             short_name: 'Timetable',
             description: 'Class Timetable App',
             theme_color: '#2563eb',
-            background_color: '#f8fafc',
+            background_color: '#2563eb',
             display: 'standalone',
             start_url: '/',
             icons: [
               {
-                src: 'https://cdn-icons-png.flaticon.com/512/2693/2693507.png',
+                src: 'pwa-192x192.png',
                 sizes: '192x192',
-                type: 'image/png'
+                type: 'image/png',
+                purpose: 'any'
               },
               {
-                src: 'https://cdn-icons-png.flaticon.com/512/2693/2693507.png',
+                src: 'pwa-512x512.png',
                 sizes: '512x512',
                 type: 'image/png',
-                purpose: 'any maskable'
+                purpose: 'any'
+              },
+              {
+                src: 'maskable-icon-512x512.png',
+                sizes: '512x512',
+                type: 'image/png',
+                purpose: 'maskable'
               }
             ]
+          },
+          icon: {
+            source: './public/icon.svg',
+            sizes: [192, 512],
+            destination: '.',
+            purpose: 'any'
+          },
+          maskableIcon: {
+            source: './public/icon-maskable.svg',
+            sizes: [512],
+            destination: '.',
+            purpose: 'maskable'
           },
           workbox: {
             globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
