@@ -24,16 +24,38 @@ const generateSemesterDates = () => {
   return dates;
 };
 
+// Helper function to get today's date if it's within the semester range, otherwise return the first date
+const getInitialDate = (allDates: Date[]): Date => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Reset time to midnight for comparison
+  
+  // Check if today is within the semester date range
+  const todayInRange = allDates.find(date => {
+    const dateOnly = new Date(date);
+    dateOnly.setHours(0, 0, 0, 0);
+    return dateOnly.getTime() === today.getTime();
+  });
+  
+  // Return today if it's in range, otherwise return the first date
+  return todayInRange || allDates[0] || new Date("December 2, 2025");
+};
+
 export const ScheduleView: React.FC<ScheduleViewProps> = ({ section, onBack }) => {
   const [timetableData, setTimetableData] = useState<DaySchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Default date set to Dec 2, 2025 per user context
-  const [currentDate, setCurrentDate] = useState(new Date("December 2, 2025"));
-  
   // Memoize the calendar days so we don't regenerate them on every render
   const allDates = useMemo(() => generateSemesterDates(), []);
+  
+  // Initialize with today's date (if in range) or first available date
+  const [currentDate, setCurrentDate] = useState(() => getInitialDate(allDates));
+  
+  // Reset to today's date when section changes
+  useEffect(() => {
+    const todayDate = getInitialDate(allDates);
+    setCurrentDate(todayDate);
+  }, [section, allDates]);
 
   useEffect(() => {
     const loadData = async () => {
