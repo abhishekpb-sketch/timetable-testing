@@ -1,20 +1,25 @@
 {
   "short_name": "Timetable",
   "name": "Class Timetable",
+  "description": "Class Timetable App",
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/2693/2693507.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any"
     },
     {
       "src": "https://cdn-icons-png.flaticon.com/512/2693/2693507.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "theme_color": "#f8fafc",
+  "orientation": "portrait",
+  "theme_color": "#2563eb",
   "background_color": "#f8fafc"
 }
