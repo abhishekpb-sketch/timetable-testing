@@ -1,10 +1,13 @@
 import React from 'react';
 import { TimeSlot } from '../types';
-import { Clock, MapPin } from 'lucide-react';
+import { Clock, MapPin, Bell, BellOff } from 'lucide-react';
 
 interface ClassCardProps {
   slot: TimeSlot;
   isDarkMode: boolean;
+  isAlarmEnabled: boolean;
+  onAlarmToggle: () => void;
+  currentDate: Date;
 }
 
 const getSubjectStyles = (subject: string) => {
@@ -32,7 +35,7 @@ const getSubjectStyles = (subject: string) => {
   return "bg-white text-gray-800 border-gray-200 ring-gray-100 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700";
 };
 
-export const ClassCard: React.FC<ClassCardProps> = ({ slot, isDarkMode }) => {
+export const ClassCard: React.FC<ClassCardProps> = ({ slot, isDarkMode, isAlarmEnabled, onAlarmToggle, currentDate }) => {
   const styles = getSubjectStyles(slot.subject);
 
   return (
@@ -49,11 +52,29 @@ export const ClassCard: React.FC<ClassCardProps> = ({ slot, isDarkMode }) => {
           </div>
         </div>
         
-        <div className="flex flex-col items-end">
+        <div className="flex flex-col items-end gap-2">
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg backdrop-blur-sm border border-black/5 dark:border-gray-600/30 shadow-sm transition-colors duration-300 bg-white/60 dark:bg-gray-700/60">
                 <Clock className="w-4 h-4 transition-colors duration-300" />
                 <span className="font-bold font-mono tracking-tight transition-colors duration-300">{slot.time}</span>
             </div>
+            
+            {/* Alarm Button */}
+            <button
+              onClick={onAlarmToggle}
+              className={`p-2 rounded-lg transition-all duration-300 active:scale-95 ${
+                isAlarmEnabled
+                  ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/60'
+                  : 'bg-gray-100 dark:bg-gray-700/60 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+              }`}
+              aria-label={isAlarmEnabled ? 'Disable alarm' : 'Enable alarm'}
+              title={isAlarmEnabled ? 'Alarm enabled (10 min before class)' : 'Enable alarm (10 min before class)'}
+            >
+              {isAlarmEnabled ? (
+                <Bell className="w-4 h-4" />
+              ) : (
+                <BellOff className="w-4 h-4" />
+              )}
+            </button>
         </div>
       </div>
     </div>

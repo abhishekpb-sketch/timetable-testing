@@ -95,9 +95,96 @@ export default function App() {
     });
   };
 
-  // Check for service worker updates
+  // Handle alarm sounds and service worker messages
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
+
+    // Store active alarm audio contexts
+    const activeAlarmAudio = new Map<string, { audioContext: AudioContext; oscillator: OscillatorNode; gainNode: GainNode; interval: NodeJS.Timeout }>();
+
+    // Function to create and play alarm sound
+    const playAlarmSound = (alarmId: string) => {
+      // Don't play if already playing
+      if (activeAlarmAudio.has(alarmId)) {
+        return;
+      }
+
+      try {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        const audioContext = new AudioContextClass();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        // Create beeping alarm sound
+        oscillator.frequency.value = 800; // 800 Hz tone
+        oscillator.type = 'sine';
+
+        // Create continuous beeping pattern: beep every 0.5 seconds
+        const beepInterval = 0.5;
+        const beepDuration = 0.2;
+
+        // Keep the oscillator running continuously
+        // Schedule beeps in a loop
+        const scheduleContinuousBeeps = () => {
+          const currentTime = audioContext.currentTime;
+          let beepTime = currentTime;
+          
+          // Schedule beeps for the next 60 seconds
+          for (let i = 0; i < 120; i++) {
+            gainNode.gain.setValueAtTime(0, beepTime);
+            gainNode.gain.setValueAtTime(0.3, beepTime + 0.01);
+            gainNode.gain.setValueAtTime(0, beepTime + beepDuration);
+            beepTime += beepInterval;
+          }
+        };
+        
+        oscillator.start(0);
+        scheduleContinuousBeeps();
+        
+        // Continuously schedule more beeps every 60 seconds
+        const beepIntervalId = setInterval(() => {
+          try {
+            scheduleContinuousBeeps();
+          } catch (error) {
+            // Audio context might be closed
+            clearInterval(beepIntervalId);
+          }
+        }, 60000);
+
+        activeAlarmAudio.set(alarmId, { audioContext, oscillator, gainNode, interval: beepIntervalId });
+      } catch (error) {
+        console.error('Error playing alarm sound:', error);
+      }
+    };
+
+    // Function to stop alarm sound
+    const stopAlarmSound = (alarmId: string) => {
+      const alarmAudio = activeAlarmAudio.get(alarmId);
+      if (alarmAudio) {
+        try {
+          alarmAudio.oscillator.stop();
+          alarmAudio.audioContext.close();
+          clearInterval(alarmAudio.interval);
+          activeAlarmAudio.delete(alarmId);
+        } catch (error) {
+          console.error('Error stopping alarm sound:', error);
+        }
+      }
+    };
+
+    // Listen for messages from service worker
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'ALARM_RINGING') {
+        playAlarmSound(event.data.alarmId);
+      } else if (event.data && event.data.type === 'ALARM_STOPPED') {
+        stopAlarmSound(event.data.alarmId);
+      }
+    };
+
+    navigator.serviceWorker.addEventListener('message', handleMessage);
 
     let updateCheckInterval: NodeJS.Timeout | null = null;
     let registration: ServiceWorkerRegistration | null = null;
@@ -145,10 +232,16 @@ export default function App() {
 
     // Cleanup function
     return () => {
+      // Stop all alarm sounds
+      activeAlarmAudio.forEach((audio, alarmId) => {
+        stopAlarmSound(alarmId);
+      });
+      
       if (updateCheckInterval) {
         clearInterval(updateCheckInterval);
       }
       navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+      navigator.serviceWorker.removeEventListener('message', handleMessage);
     };
   }, []);
 

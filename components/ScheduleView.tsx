@@ -3,7 +3,17 @@ import { Section, DaySchedule } from '../types';
 import { fetchTimetable } from '../services/sheetService';
 import { DateSelector } from './DateSelector';
 import { ClassCard } from './ClassCard';
-import { ChevronLeft, Moon, Sun, Loader2, CalendarX, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, Moon, Sun, Loader2, CalendarX, AlertTriangle, Bell, BellOff } from 'lucide-react';
+import { 
+  requestNotificationPermission, 
+  scheduleAlarm, 
+  cancelAllAlarms,
+  cancelAlarm,
+  parseTimeString, 
+  calculateAlarmTime,
+  generateAlarmId,
+  AlarmInfo
+} from '../services/alarmService';
 
 interface ScheduleViewProps {
   section: Section;
@@ -42,6 +52,9 @@ const getInitialDate = (allDates: Date[]): Date => {
   return todayInRange || allDates[0] || new Date("December 2, 2025");
 };
 
+const ALARM_STORAGE_KEY = 'timetable_alarms';
+const MASTER_ALARM_KEY = 'timetable_master_alarm';
+
 export const ScheduleView: React.FC<ScheduleViewProps> = ({ section, onBack, isDarkMode, onToggleDarkMode }) => {
   const [timetableData, setTimetableData] = useState<DaySchedule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,11 +66,119 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ section, onBack, isD
   // Initialize with today's date (if in range) or first available date
   const [currentDate, setCurrentDate] = useState(() => getInitialDate(allDates));
   
+  // Alarm state management
+  const [masterAlarmEnabled, setMasterAlarmEnabled] = useState(() => {
+    const saved = localStorage.getItem(MASTER_ALARM_KEY);
+    return saved === 'true';
+  });
+  
+  const [enabledAlarms, setEnabledAlarms] = useState<Set<string>>(() => {
+    const saved = localStorage.getItem(ALARM_STORAGE_KEY);
+    if (saved) {
+      try {
+        return new Set(JSON.parse(saved));
+      } catch {
+        return new Set();
+      }
+    }
+    return new Set();
+  });
+  
   // Reset to today's date when section changes
   useEffect(() => {
     const todayDate = getInitialDate(allDates);
     setCurrentDate(todayDate);
   }, [section, allDates]);
+
+  // Request notification permission on mount
+  useEffect(() => {
+    requestNotificationPermission();
+  }, []);
+
+  // Save enabled alarms to localStorage
+  useEffect(() => {
+    localStorage.setItem(ALARM_STORAGE_KEY, JSON.stringify(Array.from(enabledAlarms)));
+  }, [enabledAlarms]);
+
+  // Save master alarm state
+  useEffect(() => {
+    localStorage.setItem(MASTER_ALARM_KEY, String(masterAlarmEnabled));
+  }, [masterAlarmEnabled]);
+
+  // Schedule alarms when enabled alarms or master alarm changes
+  useEffect(() => {
+    const setupAlarms = async () => {
+      // Cancel all existing alarms
+      await cancelAllAlarms();
+
+      if (!masterAlarmEnabled && enabledAlarms.size === 0) {
+        return;
+      }
+
+      const alarmsToSchedule: AlarmInfo[] = [];
+      
+      selectedDayClasses.forEach((slot) => {
+        const alarmId = generateAlarmId(currentDate, slot.time, slot.subject);
+        const shouldSchedule = masterAlarmEnabled || enabledAlarms.has(alarmId);
+        
+        if (shouldSchedule) {
+          const classTime = parseTimeString(slot.time, currentDate);
+          const alarmTime = calculateAlarmTime(classTime);
+          
+          alarmsToSchedule.push({
+            id: alarmId,
+            time: slot.time,
+            subject: slot.subject,
+            date: currentDate,
+            alarmTime: alarmTime,
+          });
+        }
+      });
+
+      // Schedule all alarms
+      for (const alarm of alarmsToSchedule) {
+        await scheduleAlarm(alarm);
+      }
+    };
+
+    setupAlarms();
+
+    // Cleanup on unmount or when dependencies change
+    return () => {
+      cancelAllAlarms();
+    };
+  }, [masterAlarmEnabled, enabledAlarms, selectedDayClasses, currentDate]);
+
+  // Toggle master alarm
+  const handleMasterAlarmToggle = async () => {
+    const hasPermission = await requestNotificationPermission();
+    if (hasPermission) {
+      setMasterAlarmEnabled(prev => !prev);
+    } else {
+      alert('Please enable notifications to use alarms');
+    }
+  };
+
+  // Toggle individual alarm
+  const handleAlarmToggle = async (alarmId: string) => {
+    const hasPermission = await requestNotificationPermission();
+    if (!hasPermission) {
+      alert('Please enable notifications to use alarms');
+      return;
+    }
+
+    setEnabledAlarms(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(alarmId)) {
+        newSet.delete(alarmId);
+        // Cancel this specific alarm
+        cancelAlarm(alarmId);
+      } else {
+        newSet.add(alarmId);
+      }
+      return newSet;
+    });
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -104,17 +225,37 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ section, onBack, isD
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider transition-colors duration-300">{monthName}</span>
           </div>
           
-          <button
-            onClick={onToggleDarkMode}
-            className="w-10 h-10 bg-blue-50 dark:bg-blue-900/30 rounded-full flex items-center justify-center border border-blue-100 dark:border-blue-800 shadow-sm hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-all duration-300 active:scale-95"
-            aria-label="Toggle dark mode"
-          >
-            {isDarkMode ? (
-              <Sun className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            ) : (
-              <Moon className="w-5 h-5 text-blue-600" />
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Master Alarm Toggle */}
+            <button
+              onClick={handleMasterAlarmToggle}
+              className={`w-10 h-10 rounded-full flex items-center justify-center border shadow-sm hover:opacity-80 transition-all duration-300 active:scale-95 ${
+                masterAlarmEnabled
+                  ? 'bg-amber-50 dark:bg-amber-900/30 border-amber-100 dark:border-amber-800'
+                  : 'bg-gray-50 dark:bg-gray-800 border-gray-100 dark:border-gray-700'
+              }`}
+              aria-label="Toggle master alarm"
+            >
+              {masterAlarmEnabled ? (
+                <Bell className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              ) : (
+                <BellOff className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              )}
+            </button>
+            
+            {/* Dark Mode Toggle */}
+            <button
+              onClick={onToggleDarkMode}
+              className="w-10 h-10 bg-blue-50 dark:bg-blue-900/30 rounded-full flex items-center justify-center border border-blue-100 dark:border-blue-800 shadow-sm hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-all duration-300 active:scale-95"
+              aria-label="Toggle dark mode"
+            >
+              {isDarkMode ? (
+                <Sun className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              ) : (
+                <Moon className="w-5 h-5 text-blue-600" />
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -157,9 +298,21 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ section, onBack, isD
           </div>
         ) : (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-             {selectedDayClasses.map((slot, idx) => (
-               <ClassCard key={`${slot.time}-${idx}`} slot={slot} isDarkMode={isDarkMode} />
-             ))}
+             {selectedDayClasses.map((slot, idx) => {
+               const alarmId = generateAlarmId(currentDate, slot.time, slot.subject);
+               const isAlarmEnabled = masterAlarmEnabled || enabledAlarms.has(alarmId);
+               
+               return (
+                 <ClassCard 
+                   key={`${slot.time}-${idx}`} 
+                   slot={slot} 
+                   isDarkMode={isDarkMode}
+                   isAlarmEnabled={isAlarmEnabled}
+                   onAlarmToggle={() => handleAlarmToggle(alarmId)}
+                   currentDate={currentDate}
+                 />
+               );
+             })}
              
              <div className="pt-8 pb-12 flex justify-center">
                 <p className="text-xs text-gray-300 dark:text-gray-600 font-medium uppercase tracking-widest transition-colors duration-300">End of Schedule</p>

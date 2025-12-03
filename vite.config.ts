@@ -14,6 +14,12 @@ export default defineConfig(({ mode }) => {
         react(),
         VitePWA({
           registerType: 'autoUpdate',
+          strategies: 'injectManifest',
+          srcDir: 'public',
+          filename: 'alarm-sw.js',
+          injectManifest: {
+            globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+          },
           includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
           manifest: {
             name: 'Class Timetable',
