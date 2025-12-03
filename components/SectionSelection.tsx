@@ -27,7 +27,7 @@ export const SectionSelection: React.FC<SectionSelectionProps> = ({ onSelect, is
       <div className="relative mb-5">
         <div className="absolute inset-0 bg-blue-400 dark:bg-blue-500 blur-2xl opacity-20 rounded-full animate-pulse"></div>
         <div className="relative bg-gradient-to-br from-blue-600 to-indigo-700 dark:from-blue-500 dark:to-indigo-600 p-4 rounded-2xl shadow-xl shadow-blue-200 dark:shadow-blue-900/50">
-          <BookOpen className="w-8 h-8 text-white" />
+          <BookOpen className="w-10 h-10 text-white" style={{ shapeRendering: 'geometricPrecision' }} />
         </div>
       </div>
       
