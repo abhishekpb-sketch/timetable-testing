@@ -5,12 +5,17 @@ import { UpdateNotification } from './components/UpdateNotification';
 import { Section } from './types';
 
 const STORAGE_KEY = 'timetable_selected_section';
+const DARK_MODE_KEY = 'timetable_dark_mode';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<'home' | 'schedule'>('home');
   const [selectedSection, setSelectedSection] = useState<Section>('A');
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [updateDismissed, setUpdateDismissed] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem(DARK_MODE_KEY);
+    return saved === 'true';
+  });
 
   // Load saved section from localStorage on mount
   useEffect(() => {
@@ -20,6 +25,20 @@ export default function App() {
       setCurrentView('schedule');
     }
   }, []);
+
+  // Apply dark mode class to document
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem(DARK_MODE_KEY, String(isDarkMode));
+  }, [isDarkMode]);
+
+  const toggleDarkMode = () => {
+    setIsDarkMode(prev => !prev);
+  };
 
   // Check for service worker updates
   useEffect(() => {
@@ -101,13 +120,15 @@ export default function App() {
   };
 
   return (
-    <main className="antialiased text-gray-900">
+    <main className="antialiased text-gray-900 dark:text-gray-100 transition-colors duration-300">
       {currentView === 'home' ? (
-        <SectionSelection onSelect={handleSectionSelect} />
+        <SectionSelection onSelect={handleSectionSelect} isDarkMode={isDarkMode} />
       ) : (
         <ScheduleView 
           section={selectedSection} 
-          onBack={handleBack} 
+          onBack={handleBack}
+          isDarkMode={isDarkMode}
+          onToggleDarkMode={toggleDarkMode}
         />
       )}
       {updateAvailable && !updateDismissed && (
