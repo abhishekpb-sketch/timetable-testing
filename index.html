@@ -15,21 +15,27 @@
     <link rel="apple-touch-icon" href="/pwa-192x192.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-      tailwind.config = {
-        darkMode: 'class',
+      if (typeof tailwind !== 'undefined') {
+        tailwind.config = {
+          darkMode: 'class',
+        };
       }
       // Apply dark mode immediately to prevent flash, but React will take over
-      (function() {
-        const saved = localStorage.getItem('timetable_dark_mode');
-        // Default to dark mode if not set, only use light mode if explicitly 'false'
-        if (saved === 'false') {
-          document.documentElement.classList.remove('dark');
-        } else {
-          document.documentElement.classList.add('dark');
-          // Set to true if not already set
-          if (saved !== 'true' && saved !== null) {
-            localStorage.setItem('timetable_dark_mode', 'true');
+      (function applyDarkMode() {
+        try {
+          const saved = localStorage.getItem('timetable_dark_mode');
+          // Default to dark mode if not set, only use light mode if explicitly 'false'
+          if (saved === 'false') {
+            document.documentElement.classList.remove('dark');
+          } else {
+            document.documentElement.classList.add('dark');
+            // Set to true if not already set
+            if (saved !== 'true' && saved !== null) {
+              localStorage.setItem('timetable_dark_mode', 'true');
+            }
           }
+        } catch (e) {
+          console.error('Error applying dark mode:', e);
         }
       })();
     </script>
@@ -63,7 +69,6 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
 </head>
   <body>
     <div id="root"></div>
