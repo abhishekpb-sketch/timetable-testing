@@ -13,8 +13,13 @@ export default function App() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [updateDismissed, setUpdateDismissed] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    const saved = localStorage.getItem(DARK_MODE_KEY);
-    return saved === 'true';
+    // Default to false (light mode) - only use dark mode if explicitly saved as 'true'
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(DARK_MODE_KEY);
+      // Explicitly check for 'true', default to false for any other value (null, 'false', etc.)
+      return saved === 'true';
+    }
+    return false;
   });
 
   // Load saved section from localStorage on mount
@@ -26,14 +31,15 @@ export default function App() {
     }
   }, []);
 
-  // Apply dark mode class to document
+  // Apply dark mode class to document - runs on mount and when isDarkMode changes
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
+      localStorage.setItem(DARK_MODE_KEY, 'true');
     } else {
       document.documentElement.classList.remove('dark');
+      localStorage.setItem(DARK_MODE_KEY, 'false');
     }
-    localStorage.setItem(DARK_MODE_KEY, String(isDarkMode));
   }, [isDarkMode]);
 
   const toggleDarkMode = () => {

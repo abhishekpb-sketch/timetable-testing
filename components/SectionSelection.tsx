@@ -46,7 +46,7 @@ export const SectionSelection: React.FC<SectionSelectionProps> = ({ onSelect, is
       <div className="mt-6 flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 rounded-full border border-gray-100 dark:border-gray-700 shadow-sm transition-colors duration-300">
         {/* <Sparkles className="w-3 h-3 text-amber-500 dark:text-amber-400" /> */}
         <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">
-          Crafted with caffeine and chaos by <a href="https://www.linkedin.com/in/abhishek-p-b-b20531390/" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline hover:text-blue-800 dark:hover:text-blue-300 transition-colors">Abhishek</a> ☕✨
+          Crafted with caffeine and chaos by <a href="https://www.linkedin.com/in/abhishek-p-b-b20531390/" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline hover:text-blue-800 dark:hover:text-blue-300 transition-colors">Abhishek</a>✨
         </span>
       </div>
     </div>

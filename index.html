@@ -23,6 +23,9 @@
         const isDarkMode = localStorage.getItem('timetable_dark_mode') === 'true';
         if (isDarkMode) {
           document.documentElement.classList.add('dark');
+        } else {
+          // Explicitly ensure light mode by removing dark class
+          document.documentElement.classList.remove('dark');
         }
       })();
     </script>
