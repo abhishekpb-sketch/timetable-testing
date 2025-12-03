@@ -16,8 +16,27 @@ export default function App() {
     // Default to false (light mode) - only use dark mode if explicitly saved as 'true'
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(DARK_MODE_KEY);
-      // Explicitly check for 'true', default to false for any other value (null, 'false', etc.)
-      return saved === 'true';
+      // Explicitly check for 'true', default to false for any other value
+      // If saved value is invalid, reset to false
+      const shouldBeDark = saved === 'true';
+      
+      // Clean up invalid localStorage values
+      if (saved !== null && saved !== 'true' && saved !== 'false') {
+        localStorage.setItem(DARK_MODE_KEY, 'false');
+      }
+      
+      // Immediately sync HTML class with localStorage value
+      if (shouldBeDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        // Ensure it's set to false if not already
+        if (saved !== 'false') {
+          localStorage.setItem(DARK_MODE_KEY, 'false');
+        }
+      }
+      
+      return shouldBeDark;
     }
     return false;
   });
@@ -33,6 +52,7 @@ export default function App() {
 
   // Apply dark mode class to document - runs on mount and when isDarkMode changes
   useEffect(() => {
+    // Sync the HTML class with the React state
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
       localStorage.setItem(DARK_MODE_KEY, 'true');
@@ -43,7 +63,17 @@ export default function App() {
   }, [isDarkMode]);
 
   const toggleDarkMode = () => {
-    setIsDarkMode(prev => !prev);
+    setIsDarkMode(prev => {
+      const newValue = !prev;
+      // Immediately update localStorage and HTML class for instant feedback
+      localStorage.setItem(DARK_MODE_KEY, String(newValue));
+      if (newValue) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      return newValue;
+    });
   };
 
   // Check for service worker updates
@@ -128,7 +158,11 @@ export default function App() {
   return (
     <main className="antialiased text-gray-900 dark:text-gray-100 transition-colors duration-300">
       {currentView === 'home' ? (
-        <SectionSelection onSelect={handleSectionSelect} isDarkMode={isDarkMode} />
+        <SectionSelection 
+          onSelect={handleSectionSelect} 
+          isDarkMode={isDarkMode}
+          onToggleDarkMode={toggleDarkMode}
+        />
       ) : (
         <ScheduleView 
           section={selectedSection} 

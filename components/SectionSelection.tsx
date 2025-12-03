@@ -1,16 +1,29 @@
 import React from 'react';
 import { Section } from '../types';
 import { SECTIONS } from '../constants';
-import { BookOpen, Sparkles } from 'lucide-react';
+import { BookOpen, Sparkles, Moon, Sun } from 'lucide-react';
 
 interface SectionSelectionProps {
   onSelect: (sec: Section) => void;
   isDarkMode: boolean;
+  onToggleDarkMode: () => void;
 }
 
-export const SectionSelection: React.FC<SectionSelectionProps> = ({ onSelect, isDarkMode }) => {
+export const SectionSelection: React.FC<SectionSelectionProps> = ({ onSelect, isDarkMode, onToggleDarkMode }) => {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center px-6 py-6 transition-colors duration-300">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center px-6 py-6 transition-colors duration-300 relative">
+      {/* Dark Mode Toggle Button */}
+      <button
+        onClick={onToggleDarkMode}
+        className="absolute top-6 right-6 w-10 h-10 bg-blue-50 dark:bg-blue-900/30 rounded-full flex items-center justify-center border border-blue-100 dark:border-blue-800 shadow-sm hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-all duration-300 active:scale-95 z-10"
+        aria-label="Toggle dark mode"
+      >
+        {isDarkMode ? (
+          <Sun className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+        ) : (
+          <Moon className="w-5 h-5 text-blue-600" />
+        )}
+      </button>
       <div className="relative mb-5">
         <div className="absolute inset-0 bg-blue-400 dark:bg-blue-500 blur-2xl opacity-20 rounded-full animate-pulse"></div>
         <div className="relative bg-gradient-to-br from-blue-600 to-indigo-700 dark:from-blue-500 dark:to-indigo-600 p-4 rounded-2xl shadow-xl shadow-blue-200 dark:shadow-blue-900/50">

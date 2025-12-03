@@ -18,14 +18,18 @@
       tailwind.config = {
         darkMode: 'class',
       }
-      // Apply dark mode immediately to prevent flash
+      // Apply dark mode immediately to prevent flash, but React will take over
       (function() {
-        const isDarkMode = localStorage.getItem('timetable_dark_mode') === 'true';
-        if (isDarkMode) {
+        const saved = localStorage.getItem('timetable_dark_mode');
+        // Default to light mode if not set or if set to 'false'
+        if (saved === 'true') {
           document.documentElement.classList.add('dark');
         } else {
-          // Explicitly ensure light mode by removing dark class
           document.documentElement.classList.remove('dark');
+          // Reset to false if invalid value
+          if (saved !== 'false' && saved !== null) {
+            localStorage.setItem('timetable_dark_mode', 'false');
+          }
         }
       })();
     </script>
