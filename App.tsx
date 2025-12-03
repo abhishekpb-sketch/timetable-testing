@@ -13,32 +13,32 @@ export default function App() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [updateDismissed, setUpdateDismissed] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    // Default to false (light mode) - only use dark mode if explicitly saved as 'true'
+    // Default to true (dark mode) for better UX, but respect saved preference
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(DARK_MODE_KEY);
-      // Explicitly check for 'true', default to false for any other value
-      // If saved value is invalid, reset to false
-      const shouldBeDark = saved === 'true';
+      // If no preference saved, default to dark mode (true)
+      // Only use light mode if explicitly saved as 'false'
+      const shouldBeDark = saved !== 'false';
       
       // Clean up invalid localStorage values
       if (saved !== null && saved !== 'true' && saved !== 'false') {
-        localStorage.setItem(DARK_MODE_KEY, 'false');
+        localStorage.setItem(DARK_MODE_KEY, 'true');
       }
       
       // Immediately sync HTML class with localStorage value
       if (shouldBeDark) {
         document.documentElement.classList.add('dark');
+        if (saved !== 'true') {
+          localStorage.setItem(DARK_MODE_KEY, 'true');
+        }
       } else {
         document.documentElement.classList.remove('dark');
-        // Ensure it's set to false if not already
-        if (saved !== 'false') {
-          localStorage.setItem(DARK_MODE_KEY, 'false');
-        }
+        localStorage.setItem(DARK_MODE_KEY, 'false');
       }
       
       return shouldBeDark;
     }
-    return false;
+    return true; // Default to dark mode
   });
 
   // Load saved section from localStorage on mount
@@ -52,26 +52,45 @@ export default function App() {
 
   // Apply dark mode class to document - runs on mount and when isDarkMode changes
   useEffect(() => {
+    // Force remove first, then add if needed to ensure clean state
+    const html = document.documentElement;
+    html.classList.remove('dark');
+    
     // Sync the HTML class with the React state
     if (isDarkMode) {
-      document.documentElement.classList.add('dark');
+      html.classList.add('dark');
       localStorage.setItem(DARK_MODE_KEY, 'true');
     } else {
-      document.documentElement.classList.remove('dark');
+      html.classList.remove('dark');
       localStorage.setItem(DARK_MODE_KEY, 'false');
     }
+    
+    // Force a reflow to ensure the class change is applied
+    void html.offsetHeight;
   }, [isDarkMode]);
 
   const toggleDarkMode = () => {
+    // Use functional update to ensure we get the latest state
     setIsDarkMode(prev => {
       const newValue = !prev;
-      // Immediately update localStorage and HTML class for instant feedback
-      localStorage.setItem(DARK_MODE_KEY, String(newValue));
+      
+      // Immediately update DOM and localStorage for instant feedback
+      const html = document.documentElement;
+      
+      // Remove dark class first to ensure clean state
+      html.classList.remove('dark');
+      
       if (newValue) {
-        document.documentElement.classList.add('dark');
+        html.classList.add('dark');
+        localStorage.setItem(DARK_MODE_KEY, 'true');
       } else {
-        document.documentElement.classList.remove('dark');
+        html.classList.remove('dark');
+        localStorage.setItem(DARK_MODE_KEY, 'false');
       }
+      
+      // Force a reflow to ensure the change is applied
+      void html.offsetHeight;
+      
       return newValue;
     });
   };

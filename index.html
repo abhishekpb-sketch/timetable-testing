@@ -21,14 +21,14 @@
       // Apply dark mode immediately to prevent flash, but React will take over
       (function() {
         const saved = localStorage.getItem('timetable_dark_mode');
-        // Default to light mode if not set or if set to 'false'
-        if (saved === 'true') {
-          document.documentElement.classList.add('dark');
-        } else {
+        // Default to dark mode if not set, only use light mode if explicitly 'false'
+        if (saved === 'false') {
           document.documentElement.classList.remove('dark');
-          // Reset to false if invalid value
-          if (saved !== 'false' && saved !== null) {
-            localStorage.setItem('timetable_dark_mode', 'false');
+        } else {
+          document.documentElement.classList.add('dark');
+          // Set to true if not already set
+          if (saved !== 'true' && saved !== null) {
+            localStorage.setItem('timetable_dark_mode', 'true');
           }
         }
       })();
