@@ -105,39 +105,86 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ section, onBack, isD
     localStorage.setItem(MASTER_ALARM_KEY, String(masterAlarmEnabled));
   }, [masterAlarmEnabled]);
 
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await fetchTimetable(section);
+        console.log(`Loaded ${data.length} days of timetable data for section ${section}`);
+        if (data.length === 0) {
+          console.warn("Timetable data is empty. This might indicate a parsing issue or the sheet has no data.");
+        }
+        setTimetableData(data);
+      } catch (err: any) {
+        console.error("Error loading timetable:", err);
+        setError(err.message || "Failed to load schedule");
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, [section]);
+
+  const selectedDayClasses = useMemo(() => {
+    // Normalize currentDate to midnight for comparison
+    const normalizedCurrentDate = new Date(currentDate);
+    normalizedCurrentDate.setHours(0, 0, 0, 0);
+    
+    const match = timetableData.find(d => {
+      // Normalize dateObj to midnight for comparison
+      const normalizedDateObj = new Date(d.dateObj);
+      normalizedDateObj.setHours(0, 0, 0, 0);
+      
+      return normalizedDateObj.getTime() === normalizedCurrentDate.getTime();
+    });
+    
+    // Debug logging
+    if (timetableData.length > 0 && !match) {
+      console.log(`No classes found for ${normalizedCurrentDate.toLocaleDateString()}. Available dates:`, 
+        timetableData.slice(0, 5).map(d => d.dateObj.toLocaleDateString()));
+    }
+    
+    return match ? match.slots : [];
+  }, [timetableData, currentDate]);
+
   // Schedule alarms when enabled alarms or master alarm changes
   useEffect(() => {
     const setupAlarms = async () => {
-      // Cancel all existing alarms
-      await cancelAllAlarms();
+      try {
+        // Cancel all existing alarms
+        await cancelAllAlarms();
 
-      if (!masterAlarmEnabled && enabledAlarms.size === 0) {
-        return;
-      }
-
-      const alarmsToSchedule: AlarmInfo[] = [];
-      
-      selectedDayClasses.forEach((slot) => {
-        const alarmId = generateAlarmId(currentDate, slot.time, slot.subject);
-        const shouldSchedule = masterAlarmEnabled || enabledAlarms.has(alarmId);
-        
-        if (shouldSchedule) {
-          const classTime = parseTimeString(slot.time, currentDate);
-          const alarmTime = calculateAlarmTime(classTime);
-          
-          alarmsToSchedule.push({
-            id: alarmId,
-            time: slot.time,
-            subject: slot.subject,
-            date: currentDate,
-            alarmTime: alarmTime,
-          });
+        if (!masterAlarmEnabled && enabledAlarms.size === 0) {
+          return;
         }
-      });
 
-      // Schedule all alarms
-      for (const alarm of alarmsToSchedule) {
-        await scheduleAlarm(alarm);
+        const alarmsToSchedule: AlarmInfo[] = [];
+        
+        selectedDayClasses.forEach((slot) => {
+          const alarmId = generateAlarmId(currentDate, slot.time, slot.subject);
+          const shouldSchedule = masterAlarmEnabled || enabledAlarms.has(alarmId);
+          
+          if (shouldSchedule) {
+            const classTime = parseTimeString(slot.time, currentDate);
+            const alarmTime = calculateAlarmTime(classTime);
+            
+            alarmsToSchedule.push({
+              id: alarmId,
+              time: slot.time,
+              subject: slot.subject,
+              date: currentDate,
+              alarmTime: alarmTime,
+            });
+          }
+        });
+
+        // Schedule all alarms
+        for (const alarm of alarmsToSchedule) {
+          await scheduleAlarm(alarm);
+        }
+      } catch (error) {
+        console.error('Error setting up alarms:', error);
       }
     };
 
@@ -145,7 +192,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ section, onBack, isD
 
     // Cleanup on unmount or when dependencies change
     return () => {
-      cancelAllAlarms();
+      cancelAllAlarms().catch(err => console.error('Error canceling alarms:', err));
     };
   }, [masterAlarmEnabled, enabledAlarms, selectedDayClasses, currentDate]);
 
@@ -362,3 +409,6 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ section, onBack, isD
     </div>
   );
 };
+
+// Also export as default for easier lazy loading
+export default ScheduleView;

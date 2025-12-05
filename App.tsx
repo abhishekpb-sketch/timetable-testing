@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { SectionSelection } from './components/SectionSelection';
-import { ScheduleView } from './components/ScheduleView';
 import { UpdateNotification } from './components/UpdateNotification';
 import { Section } from './types';
+
+// Lazy load ScheduleView to help with initialization issues
+const ScheduleView = lazy(() => import('./components/ScheduleView'));
 
 const STORAGE_KEY = 'timetable_selected_section';
 const DARK_MODE_KEY = 'timetable_dark_mode';
@@ -276,12 +278,21 @@ export default function App() {
           onToggleDarkMode={toggleDarkMode}
         />
       ) : (
-        <ScheduleView 
-          section={selectedSection} 
-          onBack={handleBack}
-          isDarkMode={isDarkMode}
-          onToggleDarkMode={toggleDarkMode}
-        />
+        <Suspense fallback={
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600 dark:text-gray-400">Loading timetable...</p>
+            </div>
+          </div>
+        }>
+          <ScheduleView 
+            section={selectedSection} 
+            onBack={handleBack}
+            isDarkMode={isDarkMode}
+            onToggleDarkMode={toggleDarkMode}
+          />
+        </Suspense>
       )}
       {updateAvailable && !updateDismissed && (
         <UpdateNotification 
