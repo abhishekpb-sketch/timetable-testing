@@ -186,8 +186,13 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ section, onBack, isD
       setError(null);
       try {
         const data = await fetchTimetable(section);
+        console.log(`Loaded ${data.length} days of timetable data for section ${section}`);
+        if (data.length === 0) {
+          console.warn("Timetable data is empty. This might indicate a parsing issue or the sheet has no data.");
+        }
         setTimetableData(data);
       } catch (err: any) {
+        console.error("Error loading timetable:", err);
         setError(err.message || "Failed to load schedule");
       } finally {
         setLoading(false);
@@ -197,11 +202,24 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ section, onBack, isD
   }, [section]);
 
   const selectedDayClasses = useMemo(() => {
-    const match = timetableData.find(d => 
-      d.dateObj.getDate() === currentDate.getDate() && 
-      d.dateObj.getMonth() === currentDate.getMonth() &&
-      d.dateObj.getFullYear() === currentDate.getFullYear()
-    );
+    // Normalize currentDate to midnight for comparison
+    const normalizedCurrentDate = new Date(currentDate);
+    normalizedCurrentDate.setHours(0, 0, 0, 0);
+    
+    const match = timetableData.find(d => {
+      // Normalize dateObj to midnight for comparison
+      const normalizedDateObj = new Date(d.dateObj);
+      normalizedDateObj.setHours(0, 0, 0, 0);
+      
+      return normalizedDateObj.getTime() === normalizedCurrentDate.getTime();
+    });
+    
+    // Debug logging
+    if (timetableData.length > 0 && !match) {
+      console.log(`No classes found for ${normalizedCurrentDate.toLocaleDateString()}. Available dates:`, 
+        timetableData.slice(0, 5).map(d => d.dateObj.toLocaleDateString()));
+    }
+    
     return match ? match.slots : [];
   }, [timetableData, currentDate]);
 
@@ -286,6 +304,22 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ section, onBack, isD
                 Retry
             </button>
           </div>
+        ) : timetableData.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-[50vh] text-center p-6">
+            <div className="w-20 h-20 bg-yellow-100 dark:bg-yellow-900/20 rounded-full flex items-center justify-center mb-6 transition-colors duration-300">
+               <AlertTriangle className="w-10 h-10 text-yellow-600 dark:text-yellow-400" />
+            </div>
+            <h3 className="text-gray-900 dark:text-gray-100 font-bold text-lg mb-1 transition-colors duration-300">No Timetable Data</h3>
+            <p className="text-gray-500 dark:text-gray-400 max-w-xs mx-auto mb-4 transition-colors duration-300">
+              The timetable data could not be loaded or is empty. Please check your connection and try again.
+            </p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors duration-300"
+            >
+              Reload
+            </button>
+          </div>
         ) : selectedDayClasses.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-[50vh] text-center">
             <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-6 transition-colors duration-300">
@@ -293,8 +327,13 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ section, onBack, isD
             </div>
             <h3 className="text-gray-900 dark:text-gray-100 font-bold text-lg mb-1 transition-colors duration-300">No Classes Scheduled</h3>
             <p className="text-gray-500 dark:text-gray-400 max-w-xs mx-auto transition-colors duration-300">
-              There are no classes listed for {currentDate.toLocaleDateString('en-US', { weekday: 'long' })}. Enjoy your free time!
+              There are no classes listed for {currentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}. Enjoy your free time!
             </p>
+            {timetableData.length > 0 && (
+              <p className="text-gray-400 dark:text-gray-500 text-xs mt-2 transition-colors duration-300">
+                Try selecting a different date from the calendar above.
+              </p>
+            )}
           </div>
         ) : (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">

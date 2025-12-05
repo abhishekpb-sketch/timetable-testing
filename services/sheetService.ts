@@ -15,8 +15,37 @@ const parseSheetDate = (dateStr: string): Date | null => {
     year = 2026;
   }
 
-  const date = new Date(`${cleanStr} ${year}`);
-  return isNaN(date.getTime()) ? null : date;
+  // Try parsing the date
+  let date = new Date(`${cleanStr} ${year}`);
+  
+  // If that fails, try alternative formats
+  if (isNaN(date.getTime())) {
+    // Try with full month name
+    const monthMap: Record<string, string> = {
+      'jan': 'January', 'feb': 'February', 'mar': 'March', 'apr': 'April',
+      'may': 'May', 'jun': 'June', 'jul': 'July', 'aug': 'August',
+      'sep': 'September', 'oct': 'October', 'nov': 'November', 'dec': 'December'
+    };
+    
+    for (const [abbr, full] of Object.entries(monthMap)) {
+      if (lowerStr.startsWith(abbr)) {
+        const dayMatch = cleanStr.match(/\d+/);
+        if (dayMatch) {
+          date = new Date(`${full} ${dayMatch[0]}, ${year}`);
+          if (!isNaN(date.getTime())) break;
+        }
+      }
+    }
+  }
+  
+  // If still invalid, return null
+  if (isNaN(date.getTime())) {
+    return null;
+  }
+  
+  // Normalize to midnight for consistent comparison
+  date.setHours(0, 0, 0, 0);
+  return date;
 };
 
 export const fetchTimetable = async (section: Section): Promise<DaySchedule[]> => {
@@ -47,6 +76,11 @@ export const fetchTimetable = async (section: Section): Promise<DaySchedule[]> =
     // Convert gviz rows to simple string arrays to match existing logic
     // json.table.cols contains column metadata
     // json.table.rows contains data
+    if (!json.table || !json.table.rows) {
+      console.error("Invalid response structure:", json);
+      throw new Error("Sheet response missing table data");
+    }
+    
     const rows = json.table.rows.map((row: any) => {
         // row.c is array of cells. Cell can be null.
         if (!row.c) return [];
@@ -56,6 +90,8 @@ export const fetchTimetable = async (section: Section): Promise<DaySchedule[]> =
             return (cell.f || cell.v || "").toString();
         });
     });
+    
+    console.log(`Parsed ${rows.length} rows from sheet`);
 
     const processed: DaySchedule[] = [];
     const startIndex = SECTION_COLUMN_MAP[section] || 21;
@@ -64,21 +100,34 @@ export const fetchTimetable = async (section: Section): Promise<DaySchedule[]> =
     // Find the header row or start of data dynamically
     // We look for the first row that contains a valid date-like string in the second column (Index 1)
     let dataStartRow = 0;
+    const monthPatterns = ["Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep",
+                           "October", "November", "December", "January", "February", "March", "April"];
     for (let i = 0; i < rows.length; i++) {
-      const cell = rows[i][1];
-      if (cell && (cell.includes("Oct") || cell.includes("Nov") || cell.includes("Dec") || cell.includes("Jan"))) {
-        dataStartRow = i;
-        break;
+      const cell = rows[i]?.[1];
+      if (cell && typeof cell === 'string') {
+        const cellLower = cell.toLowerCase();
+        if (monthPatterns.some(pattern => cellLower.includes(pattern.toLowerCase()))) {
+          dataStartRow = i;
+          break;
+        }
       }
     }
 
+    console.log(`Processing section ${section}, starting from row ${dataStartRow}, column index ${startIndex}`);
+    
     for (let i = dataStartRow; i < rows.length; i++) {
       const row = rows[i];
       // Safety check for row length
       if (!row || row.length < 2) continue;
 
       const dateObj = parseSheetDate(row[1]);
-      if (!dateObj) continue;
+      if (!dateObj) {
+        // Only log first few failures to avoid spam
+        if (i < dataStartRow + 3) {
+          console.log(`Failed to parse date from row ${i}, cell value: "${row[1]}"`);
+        }
+        continue;
+      }
 
       const currentSlots: TimeSlot[] = [];
       let hasClass = false;
@@ -104,10 +153,19 @@ export const fetchTimetable = async (section: Section): Promise<DaySchedule[]> =
         });
       }
     }
+    
+    console.log(`Processed ${processed.length} days with classes for section ${section}`);
     return processed;
 
   } catch (error) {
     console.error("Failed to fetch timetable:", error);
-    throw error;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("Error details:", {
+      message: errorMessage,
+      section,
+      spreadsheetId: SPREADSHEET_ID,
+      sheetTab: SHEET_TAB_NAME
+    });
+    throw new Error(`Failed to load timetable: ${errorMessage}`);
   }
 };
