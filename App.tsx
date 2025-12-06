@@ -1,10 +1,35 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { SectionSelection } from './components/SectionSelection';
 import { UpdateNotification } from './components/UpdateNotification';
 import { Section } from './types';
 
-// Lazy load ScheduleView to help with initialization issues
-const ScheduleView = lazy(() => import('./components/ScheduleView'));
+// Dynamically import ScheduleView to avoid initialization issues
+const ScheduleView = lazy(() => 
+  import('./components/ScheduleView')
+    .then(module => ({ default: module.ScheduleView }))
+    .catch(error => {
+      console.error('Failed to load ScheduleView:', error);
+      // Return a fallback component
+      return {
+        default: () => (
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="text-center p-6">
+              <h2 className="text-xl font-bold mb-2">Error Loading Timetable</h2>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                There was an error loading the timetable view. Please refresh the page.
+              </p>
+              <button 
+                onClick={() => window.location.reload()} 
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+              >
+                Refresh Page
+              </button>
+            </div>
+          </div>
+        )
+      };
+    })
+);
 
 const STORAGE_KEY = 'timetable_selected_section';
 const DARK_MODE_KEY = 'timetable_dark_mode';

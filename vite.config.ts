@@ -118,9 +118,16 @@ export default defineConfig(({ mode }) => {
           output: {
             entryFileNames: 'assets/[name].[hash].js',
             chunkFileNames: 'assets/[name].[hash].js',
-            assetFileNames: 'assets/[name].[hash].[ext]'
+            assetFileNames: 'assets/[name].[hash].[ext]',
+            // Preserve module structure to avoid initialization issues
+            format: 'es',
+            manualChunks: undefined
           }
-        }
+        },
+        // Increase chunk size warning limit
+        chunkSizeWarningLimit: 1000,
+        // Use source maps for better debugging
+        sourcemap: false
       }
     };
 });
