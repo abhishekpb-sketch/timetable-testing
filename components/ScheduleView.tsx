@@ -227,49 +227,6 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ section, onBack, isD
     });
   };
 
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await fetchTimetable(section);
-        console.log(`Loaded ${data.length} days of timetable data for section ${section}`);
-        if (data.length === 0) {
-          console.warn("Timetable data is empty. This might indicate a parsing issue or the sheet has no data.");
-        }
-        setTimetableData(data);
-      } catch (err: any) {
-        console.error("Error loading timetable:", err);
-        setError(err.message || "Failed to load schedule");
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadData();
-  }, [section]);
-
-  const selectedDayClasses = useMemo(() => {
-    // Normalize currentDate to midnight for comparison
-    const normalizedCurrentDate = new Date(currentDate);
-    normalizedCurrentDate.setHours(0, 0, 0, 0);
-    
-    const match = timetableData.find(d => {
-      // Normalize dateObj to midnight for comparison
-      const normalizedDateObj = new Date(d.dateObj);
-      normalizedDateObj.setHours(0, 0, 0, 0);
-      
-      return normalizedDateObj.getTime() === normalizedCurrentDate.getTime();
-    });
-    
-    // Debug logging
-    if (timetableData.length > 0 && !match) {
-      console.log(`No classes found for ${normalizedCurrentDate.toLocaleDateString()}. Available dates:`, 
-        timetableData.slice(0, 5).map(d => d.dateObj.toLocaleDateString()));
-    }
-    
-    return match ? match.slots : [];
-  }, [timetableData, currentDate]);
-
   const monthName = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   return (
